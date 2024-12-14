@@ -1652,6 +1652,7 @@ function parseAndPopulateFields(xmlContent) {
             balanceAmount,
             currentPayment: paymentAmount,
             newPayment,
+            payoffStatus
             
         });
 
@@ -1854,20 +1855,23 @@ async function genPDF() {
             loanDetailsTableBody.innerHTML = "";
 
             // Add rows dynamically from liabilitiesData
-            liabilitiesData.forEach((liability, index) => {
-                const row = document.createElement("tr");
-                row.className = "debts-row";
+            liabilitiesData.forEach((liability, index) => {  
+                if (liability.payoffStatus === "Yes") { // Check if payoffStatus is "Yes"
+                    const row = document.createElement("tr");
+                    row.className = "debts-row";
 
-                row.innerHTML = `
-                    <td class="p-2">${liability.accountName}</td>
-                    <td class="p-2">${liability.liabilityType}</td>
-                    <td class="p-2">${liability.balanceAmount}</td>
-                    <td class="p-2">${liability.currentPayment}</td>
-                    <td class="p-2">${liability.newPayment}</td>
-                `;
+                    row.innerHTML = `
+                        <td class="p-2">${liability.accountName}</td>
+                        <td class="p-2">${liability.liabilityType}</td>
+                        <td class="p-2">${liability.balanceAmount}</td>
+                        <td class="p-2">${liability.currentPayment}</td>
+                        <td class="p-2">${liability.newPayment}</td>
+                    `;
 
-                loanDetailsTableBody.appendChild(row);
+                    loanDetailsTableBody.appendChild(row);
+                }
             });
+
         } else {
             console.warn("Table body for loan details not found in tempContainer.");
         }
