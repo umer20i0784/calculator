@@ -918,16 +918,7 @@
                                             value="">
                                     </div>
                                 </div>
-                                <div class="col-md-3">
-                                    <label for="hm2_in_1">Extra Payment</label>
-                                    <div class="input-group">
-                                        <div class="input-group-prepend">
-                                            <span class="input-group-text">$</span>
-                                        </div>
-                                        <input type="text" class="form-control hm2_cl-curr hm2_cl-input" id="extra_payment"
-                                            value="">
-                                    </div>
-                                </div>
+                                
                             </div>
                         </div>
                         <div class="col-md-12 all-debts-sec">
@@ -1477,6 +1468,8 @@ let mortgageType = "";
 let loanTermYears = 0;
 let noteRatePercent = 0;
 let liabilitiesData = [];
+let totalBalance = 0;
+let totalPayments = 0;
 
 
 
@@ -1593,6 +1586,14 @@ function parseAndPopulateFields(xmlContent) {
             </select>
         </td>
     `;
+
+    // Attach an event listener to the select element to update liabilitiesData
+    const selectElement = row.querySelector("select");
+    selectElement.addEventListener("change", (event) => {
+        const newValue = event.target.value;
+        liabilitiesData[index].payoffStatus = newValue;
+        console.log(`Updated payoffStatus for index ${index}:`, liabilitiesData[index]);
+    });
         allDebtsTable.appendChild(row);
        
     });
@@ -1673,6 +1674,7 @@ function parseAndPopulateFields(xmlContent) {
 
             var effective_interest_savings = 0;
 
+            var propose_mortgage_bl = 0
 async function genPDF() {
     try {
         // Fetch the external HTML file
@@ -1701,6 +1703,17 @@ async function genPDF() {
         const proposedPaymentElement = tempContainer.querySelector("#new-proposed-payment");
         if (proposedPaymentElement) {
             proposedPaymentElement.textContent = `${new_payment1}`;
+        }
+
+        var new_loan_amount = document.getElementById("hm2_in_4")?.textContent || "$0.00";
+        console.log("new loan amount")
+        console.log(new_loan_amount)
+        new_loan_amount = noteAmount
+        console.log("note amount")
+        console.log(new_loan_amount)
+        const loanElement = tempContainer.querySelector("#loan-amount");
+        if (loanElement) {
+            loanElement.textContent = `${new_loan_amount}`;
         }
 
         // Populate the "CASH TO YOU" section with the extracted value
@@ -1763,21 +1776,31 @@ async function genPDF() {
 
         const loanPaymentElement = tempContainer.querySelector("#loan-payment");
         if (loanPaymentElement) {
-            loanPaymentElement.textContent = `$${noteAmount}`;
+            loanPaymentElement.textContent = `$${parseFloat(propose_mortgage_bl).toFixed(2)}`;
         }
 
-        const aprElement = document.getElementById("pdf_in_apr");
-        const aprValue = aprElement ? aprElement.textContent.trim() : "0.00%";
 
+        const aprElement = document.getElementById("in_apr");
+        let aprValue = aprElement ? aprElement.value.trim() : "0.00";
+
+        if (aprValue) {
+            aprValue = parseFloat(aprValue).toFixed(1); // Allow only 1 decimal point
+        }
+
+        if(noteRatePercent){
+            noteRatePercent = parseFloat(noteRatePercent).toFixed(1); 
+        }
+      
 
 
         const interestRateAprElement = tempContainer.querySelector("#interest-rate-apr");
         if (interestRateAprElement) {
-            interestRateAprElement.textContent = `${noteRatePercent}% / ${aprValue}`;
+            interestRateAprElement.textContent = `${noteRatePercent}% / ${aprValue}%`;
         }
 
         const loanDetailsTableBody = tempContainer.querySelector("#loan-details-table tbody");
-
+        totalBalance=0
+        totalPayments=0
         if (loanDetailsTableBody) {
             // Clear any existing rows in the table body
             loanDetailsTableBody.innerHTML = "";
@@ -1785,6 +1808,12 @@ async function genPDF() {
             // Add rows dynamically from liabilitiesData
             liabilitiesData.forEach((liability, index) => {  
                 if (liability.payoffStatus === "Yes") { // Check if payoffStatus is "Yes"
+
+                    totalBalance += parseFloat(liability.balanceAmount) || 0;
+                    totalPayments += parseFloat(liability.currentPayment) || 0;
+                    
+                    console.log(liability.accountName)
+                    console.log(liability.payoffStatus)
                     const row = document.createElement("tr");
                     row.className = "debts-row";
 
@@ -1804,23 +1833,22 @@ async function genPDF() {
             console.warn("Table body for loan details not found in tempContainer.");
         }
 
-        const debtTotal = $("#debts_paid_rs_1").text().trim() || "$0";
-        const debtBalance = $("#debts_paid_rs_2").text().trim() || "$0";
-
+        
         const loanTotalBalance = tempContainer.querySelector("#loan-total-balance");
         if (loanTotalBalance) {
-            loanTotalBalance.textContent = debtBalance; // Populate balance
+            loanTotalBalance.textContent = totalBalance; // Populate balance
         }
 
         const loanTotalCurrentPayment = tempContainer.querySelector("#loan-total-current-payment");
         if (loanTotalCurrentPayment) {
-            loanTotalCurrentPayment.textContent = debtTotal; // Populate total payment
+            loanTotalCurrentPayment.textContent = totalPayments; // Populate total payment
         }
 
-         // Calculate the sum of all liabilities' newPayment in liabilitiesData
-         const totalNewPayment = liabilitiesData.reduce((sum, liability) => {
-            return sum + parseFloat(liability.newPayment || 0);
-        }, 0).toFixed(2);
+        const totalNewPayment = 0
+        //  // Calculate the sum of all liabilities' newPayment in liabilitiesData
+        //  const totalNewPayment = liabilitiesData.reduce((sum, liability) => {
+        //     return sum + parseFloat(liability.newPayment || 0);
+        // }, 0).toFixed(2);
 
         // Populate total new payment into the tempContainer
         const loanTotalNewPayment = tempContainer.querySelector("#loan-total-new-payment");
@@ -1845,7 +1873,7 @@ async function genPDF() {
 
         const effectiveInterestSavingsValue = tempContainer.querySelector("#effective-interest-savings-value");
         if (effectiveInterestSavingsValue) {
-            effectiveInterestSavingsValue.textContent = effective_interest_savings;
+            effectiveInterestSavingsValue.textContent = Math.round(effective_interest_savings);
         }
 
         const effectiveInterestRateValue = tempContainer.querySelector("#effective-interest-rate-value");
@@ -1909,9 +1937,10 @@ async function genPDF() {
     }
 }
 
-
+            
 
             function hm2_calc() {
+                propose_mortgage_bl=0;
                 console.log("Starting hm2_calc function");
                 effective_interest_savings = 0;
                 
@@ -1965,7 +1994,7 @@ async function genPDF() {
                 $("#debts_paid_rs_2").text("$" + hm2_nftd.format(debt_balance));
 
                 let current_pi = PMT(0 / 12, 0 * 12, (-1 * 0));
-                let propose_mortgage_bl = PMT(hm2_in_6 / 12, hm2_in_5 * 12, (-1 * hm2_in_4));
+                propose_mortgage_bl = PMT(hm2_in_6 / 12, hm2_in_5 * 12, (-1 * hm2_in_4));
 
                 console.log("Payment Calculations:");
                 console.log(`  current_pi (Current P&I Payment): ${current_pi}`);
@@ -2026,7 +2055,7 @@ async function genPDF() {
                 // Calculate the year difference
                 year_remove_curr_payment = 0;
 
-                extra_payment = hm2_removeSign($("#extra_payment").val());
+                extra_payment = new_monthly_saving;
 
                 if(extra_payment == 0){
                     year_remove_curr_payment = 0;
